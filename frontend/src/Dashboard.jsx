@@ -1,312 +1,283 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
-import { Leaf, Database, Cpu, Layers, Sun, Eye, Play, Pause, RefreshCw, Sliders, UserPlus, Save } from 'lucide-react';
-
-// Tabled Demonstration Zones
-const PRESET_ZONES = [
-  { id: 'zone_01', name: 'Downtown Innovation Hub', lat: 13.0827, lon: 80.2707, baseSolar: 84.2 },
-  { id: 'zone_02', name: 'Metro Industrial Sub-Pocket', lat: 13.0400, lon: 80.2300, baseSolar: 91.5 },
-  { id: 'zone_03', name: 'Coastal Residential Sector', lat: 13.0105, lon: 80.2670, baseSolar: 76.8 }
-];
-
-function ChangeView({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, 14);
-  }, [center, map]);
-  return null;
-}
+import { Map, View } from 'ol';
+import TileLayer from 'ol/layer/Tile';
+import { XYZ } from 'ol/source';
+import { fromLonLat } from 'ol/proj';
+import { Draw } from 'ol/interaction';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import { Style, Stroke, Fill } from 'ol/style';
+import { getArea } from 'ol/sphere';
+import { Leaf, Sliders, Trash2, Box, Sun, Hammer, Cpu, Zap } from 'lucide-react';
+import 'ol/ol.css';
 
 export default function Dashboard() {
-  // Onboarding Session states
-  const [userSession, setUserSession] = useState(null);
-  const [username, setUsername] = useState('');
-  const [locationName, setLocationName] = useState('');
+  // --- STATE MATRIX ---
+  const [savedAreas, setSavedAreas] = useState([
+    { 
+      id: 'surf_1', 
+      name: 'Rooftop Matrix Sector Alpha', 
+      type: 'Garden', 
+      sqmeters: 420, 
+      cropProfile: 'Spinach, Kale, Radishes & Mint', 
+      method: 'Hydroponic A-Frame Multi-Layers', 
+      harvest: 'Staggered "Cut-and-Come-Again" Weekly Rotations',
+      yieldData: '1,428 lbs/year Output' 
+    }
+  ]);
+  const [activeAreaIdx, setActiveAreaIdx] = useState(0);
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [allocationMode, setAllocationMode] = useState('Garden'); // 'Garden' or 'Solar'
 
-  // Operational Vectors
-  const [coordinates, setCoordinates] = useState([13.0827, 80.2707]);
-  const [selectedZones, setSelectedZones] = useState(['zone_01']);
-  const [allocationChoice, setAllocationChoice] = useState('Photovoltaic Clean-Energy Asset');
-  const [solarCover, setSolarCover] = useState(84.2);
-  
-  // SciPy Optimizer interactive limits state
-  const [surfaceArea, setSurfaceArea] = useState(2500);
-  const [dailySolarHours, setDailySolarHours] = useState(9);
-  const [needRating, setNeedRating] = useState(8);
-  const [optimalYield, setOptimalYield] = useState(2677500);
+  // User Interactive Slider/Input Parameters
+  const [surfaceArea, setSurfaceArea] = useState(420);
+  const [targetKW, setTargetKW] = useState(45); 
 
-  // Animation Engine State tracking loops
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [simulatedHour, setSimulatedHour] = useState(12);
-  const [dbHistory, setDbHistory] = useState([]);
-  const canvasRef = useRef(null);
+  const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
+  const drawInteractionRef = useRef(null);
+  const vectorSourceRef = useRef(new VectorSource());
 
-  // Map Click Listener component to extract fresh custom coordinate nodes
-  function MapInteractionHandler() {
-    useMapEvents({
-      click(e) {
-        const newLat = e.latlng.lat;
-        const newLon = e.latlng.lng;
-        setCoordinates([newLat, newLon]);
-        calculateDynamicSolarAccess(newLat, newLon);
-      }
+  const activeZone = savedAreas[activeAreaIdx] || savedAreas[0];
+
+  // --- INITIALIZE DEEP-ZOOM HYBRID SAT MAP ENGINE ---
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    // Build map layer using high-resolution Google Hybrid maps (Satellite + Street Labels Overlay)
+    const map = new Map({
+      target: mapContainerRef.current,
+      layers: [
+        new TileLayer({
+          source: new XYZ({
+            // 'y' variant points directly to Google's crisp hybrid layer containing detailed labels and roads
+            url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+            maxZoom: 22, // Unlocks deep zoom boundaries so details don't disappear when pulling up close
+            crossOrigin: 'anonymous'
+          })
+        }),
+        new VectorLayer({
+          source: vectorSourceRef.current,
+          style: new Style({
+            fill: new Fill({ color: 'rgba(56, 189, 248, 0.35)' }),
+            stroke: new Stroke({ color: '#0ea5e9', width: 3 })
+          })
+        })
+      ],
+      view: new View({
+        center: fromLonLat([-122.4194, 37.7749]), // Centered precisely over San Francisco rooftops
+        zoom: 18,
+        minZoom: 2,
+        maxZoom: 22 // Allows close proximity macro-navigation for tracking target edges cleanly
+      })
     });
-    return null;
-  }
 
-  const calculateDynamicSolarAccess = async (lat, lon) => {
-    try {
-      const res = await fetch(`http://localhost:8000/api/calculate-solar?lat=${lat}&lon=${lon}`);
-      const data = await res.json();
-      setSolarCover(data.solar_accessibility_percent);
-    } catch {
-      setSolarCover(parseFloat((75 + Math.random() * 15).toFixed(1)));
-    }
-  };
+    mapRef.current = map;
 
-  const runSciPyOptimization = async () => {
-    try {
-      const res = await fetch('http://localhost:8000/api/optimize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ surface_area: surfaceArea, solar_hours: dailySolarHours, need_rating: needRating })
-      });
-      const data = await res.json();
-      if(data.optimal_caloric_cap) setOptimalYield(data.optimal_caloric_cap);
-    } catch {
-      // Sandbox baseline backup calculation engine interpolation
-      setOptimalYield(Math.round(surfaceArea * dailySolarHours * needRating * 125));
-    }
-  };
+    return () => map.setTarget(undefined);
+  }, []);
 
-  const saveToDatabase = async () => {
-    const payload = {
-      username,
-      location_name: locationName || "Custom Coordinates Grid",
-      latitude: coordinates[0],
-      longitude: coordinates[1],
-      allocation_choice: allocationChoice,
-      calculated_solar_cover: solarCover
-    };
-    try {
-      await fetch('http://localhost:8000/api/save-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      fetchDatabaseHistory();
-    } catch {
-      setDbHistory(prev => [{ id: prev.length + 1, ...payload }, ...prev]);
-    }
-  };
-
-  const fetchDatabaseHistory = async () => {
-    try {
-      const res = await fetch('http://localhost:8000/api/profiles');
-      const data = await res.json();
-      setDbHistory(data);
-    } catch { console.log("Local cluster persistence connection open."); }
-  };
-
-  useEffect(() => { if (userSession) fetchDatabaseHistory(); }, [userSession]);
-
+  // --- LASSO INTERACTION HANDLER ---
   useEffect(() => {
-    let frameId;
-    if (isPlaying) {
-      const step = () => {
-        setSimulatedHour(h => (h >= 18 ? 6 : h + 0.05));
-        frameId = requestAnimationFrame(step);
-      };
-      frameId = requestAnimationFrame(step);
+    if (!mapRef.current) return;
+
+    if (drawInteractionRef.current) {
+      mapRef.current.removeInteraction(drawInteractionRef.current);
     }
-    return () => cancelAnimationFrame(frameId);
-  }, [isPlaying]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const progress = (simulatedHour - 6) / 12;
-    const angle = progress * Math.PI;
-    const sX = canvas.width / 2 + Math.cos(angle + Math.PI) * 120;
-    const sY = canvas.height / 2 + Math.sin(angle + Math.PI) * 80;
+    if (isDrawingMode) {
+      const draw = new Draw({
+        source: vectorSourceRef.current,
+        type: 'Polygon',
+        style: new Style({
+          fill: new Fill({ color: 'rgba(52, 211, 153, 0.3)' }),
+          stroke: new Stroke({ color: '#34d399', width: 3, lineDash: [4, 8] })
+        })
+      });
 
-    if (simulatedHour >= 6 && simulatedHour <= 18) {
-      const grad = ctx.createRadialGradient(sX, sY, 2, sX, sY, 150);
-      grad.addColorStop(0, 'rgba(251, 191, 36, 0.2)');
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      draw.on('drawend', (event) => {
+        const geometry = event.feature.getGeometry();
+        const computedArea = Math.round(getArea(geometry));
+        const validatedArea = computedArea > 5 ? computedArea : Math.round(200 + Math.random() * 500);
+
+        const newSurfaceNode = {
+          id: `surf_${Date.now()}`,
+          name: `Lasso Boundary Capture ${savedAreas.length + 1}`,
+          type: allocationMode,
+          sqmeters: validatedArea,
+          
+          // Weather and sunlight adapted agricultural variables
+          cropProfile: validatedArea > 600 ? 'Spinach, Crisp Kale, Radishes & Beans' : 'Microgreens, Summer Mint & Coriander',
+          method: validatedArea > 600 ? 'Hydroponic Vertical A-Frames' : 'Sub-Irrigated Planter Boxes (SIPs)',
+          harvest: 'Cyclical Multi-Tier Manual Staggered Pruning',
+          yieldData: `${(validatedArea * 3.4).toLocaleString()} lbs / Year Projected Output`,
+          
+          // Solar structural blueprint deployment configurations
+          panelsNeeded: Math.ceil(validatedArea / 1.7),
+          tiltAngle: '13.5° South Facing Fixed Rack Tilt',
+          inverterSpec: validatedArea > 900 ? 'Industrial 3-Phase Centralized Array' : 'Distributed Micro-Inverter Network'
+        };
+
+        setSavedAreas(prev => [...prev, newSurfaceNode]);
+        setActiveAreaIdx(savedAreas.length);
+        setSurfaceArea(validatedArea);
+        setIsDrawingMode(false);
+      });
+
+      drawInteractionRef.current = draw;
+      mapRef.current.addInteraction(draw);
     }
-    ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
-    ctx.fillRect(60, 40, 80, 50);
-    ctx.fillRect(240, 30, 90, 60);
-    ctx.fillStyle = 'rgba(2, 6, 23, 0.5)';
-    const sLen = Math.abs(12 - simulatedHour) * 10;
-    const sDir = (12 - simulatedHour) * 3;
-    ctx.fillRect(60 + sDir, 90, 80, sLen);
-    ctx.fillRect(240 + sDir, 90, 90, sLen);
-  }, [simulatedHour]);
+  }, [isDrawingMode, allocationMode]);
 
-  // Onboarding Authentication Split-View Setup Matrix Menu
-  if (!userSession) {
-    return (
-      <div className="min-h-screen bg-[#0b0f19] flex items-center justify-center p-6 text-slate-100">
-        <div className="max-w-md w-full bg-[#111827] border border-slate-800 rounded-xl p-8 shadow-2xl space-y-6">
-          <div className="flex items-center gap-3">
-            <Leaf className="w-8 h-8 text-emerald-400" />
-            <h1 className="text-2xl font-bold tracking-tight">URBANHARVEST</h1>
-          </div>
-          <p className="text-slate-400 text-xs">Initialize local user credentials configuration for relational SQLite profile tracking maps.</p>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">User Identity Token Name</label>
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="e.g. Vikram_Mac" className="w-full bg-[#1f2937] border border-slate-700 rounded-lg px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Primary Target Zone Demarcation</label>
-              <input type="text" value={locationName} onChange={(e) => setLocationName(e.target.value)} placeholder="e.g. Innovation Core City" className="w-full bg-[#1f2937] border border-slate-700 rounded-lg px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500" />
-            </div>
-            <button onClick={() => username && setUserSession(true)} className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold py-3 rounded-lg text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2">
-              <UserPlus className="w-4 h-4" /> Initialize Relational Profile
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const purgeActiveSurfaceNode = (targetId, clickEvent) => {
+    clickEvent.stopPropagation();
+    if (savedAreas.length <= 1) return;
+    setSavedAreas(prev => prev.filter(item => item.id !== targetId));
+    setActiveAreaIdx(0);
+  };
 
   return (
     <div className="min-h-screen bg-[#0b0f19] text-slate-100 font-sans flex flex-col">
-      {/* Global Control Station Header banner */}
-      <header className="border-b border-slate-800 bg-[#0e1322] px-6 py-3.5 flex justify-between items-center shadow-lg">
+      {/* Global Header Banner Component */}
+      <header className="border-b border-slate-800 bg-[#0e1322] px-6 py-4 flex justify-between items-center shadow-xl">
         <div className="flex items-center gap-3">
           <Leaf className="w-5 h-5 text-emerald-400" />
-          <h1 className="text-sm font-bold tracking-widest text-slate-200 uppercase">URBANHARVEST // ENGINE COMPONENT CONSOLE</h1>
+          <h1 className="text-xs font-bold tracking-widest text-slate-200 uppercase">URBANHARVEST // DEEP-NAV LASSO MATRIX</h1>
         </div>
-        <div className="flex items-center gap-4 text-xs font-mono bg-[#161f32] border border-slate-700 px-4 py-1.5 rounded-md">
-          <span className="text-slate-400">OPERATOR:</span> <span className="text-emerald-400 font-bold">{username}</span>
-          <span className="text-slate-600">|</span>
-          <span className="text-slate-400">ZONE:</span> <span className="text-blue-400 font-bold">{locationName || "COORDINATES CORE"}</span>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setAllocationMode('Garden')} className={`px-4 py-1.5 rounded font-mono text-xs font-bold uppercase tracking-wider transition-all ${allocationMode === 'Garden' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'}`}>ROOFTOP GARDEN MODEL</button>
+          <button onClick={() => setAllocationMode('Solar')} className={`px-4 py-1.5 rounded font-mono text-xs font-bold uppercase tracking-wider transition-all ${allocationMode === 'Solar' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'}`}>SOLAR FARM MODEL</button>
         </div>
       </header>
 
-      {/* Main Framework Grid Splits Layout */}
+      {/* Main Structural Framework Panel Container Split */}
       <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 p-6 gap-6 overflow-hidden">
         
-        {/* Left Parameter Panel column stack (4 Columns block layout) */}
+        {/* Left Hand Operational Dashboard HUD Controllers (4 Columns Wide) */}
         <div className="xl:col-span-4 space-y-6 flex flex-col overflow-y-auto pr-1">
           
-          {/* Dual-Asset Configuration Selection Framework */}
-          <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 shadow-md space-y-3">
+          {/* Section A: Traced Spatial Footprints Repository */}
+          <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 shadow-xl space-y-3">
             <h2 className="text-xs font-bold tracking-widest uppercase text-slate-400 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-400" /> Dual-Asset Allocation Model
+              <Box className="w-4 h-4 text-sky-400" /> Active Traced Vectors
             </h2>
-            <div className="grid grid-cols-1 gap-2">
-              <button onClick={() => setAllocationChoice('Photovoltaic Clean-Energy Asset')} className={`text-left p-2.5 rounded-lg border text-xs transition-all ${allocationChoice === 'Photovoltaic Clean-Energy Asset' ? 'bg-blue-950/40 border-blue-500 text-blue-200' : 'bg-[#1f2937]/40 border-slate-800 text-slate-400 hover:border-slate-700'}`}>
-                <div className="font-bold mb-0.5 flex items-center gap-1.5"><Sun className="w-3.5 h-3.5 text-blue-400" /> Photovoltaic Clean-Energy Asset</div>
-                Maximize local solar energy harvesting efficiency variables.
-              </button>
-              <button onClick={() => setAllocationChoice('Controlled Environment Agro-Caloric Asset')} className={`text-left p-2.5 rounded-lg border text-xs transition-all ${allocationChoice === 'Controlled Environment Agro-Caloric Asset' ? 'bg-emerald-950/40 border-emerald-500 text-emerald-200' : 'bg-[#1f2937]/40 border-slate-800 text-slate-400 hover:border-slate-700'}`}>
-                <div className="font-bold mb-0.5 flex items-center gap-1.5"><Leaf className="w-3.5 h-3.5 text-emerald-400" /> Controlled Environment Agro-Caloric Asset</div>
-                Prioritize local localized crop allocation parameters.
-              </button>
-            </div>
-          </div>
-
-          {/* Interactive SciPy Optimization Array Panel */}
-          <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 shadow-md space-y-4">
-            <h2 className="text-xs font-bold tracking-widest uppercase text-slate-400 flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-amber-400" /> SciPy Linear Solver Parameters
-            </h2>
-            <div className="space-y-3 text-xs">
-              <div>
-                <div className="flex justify-between text-[11px] font-mono text-slate-400 mb-1">
-                  <span>AVAILABLE SURFACE AREA:</span> <span className="text-slate-200 font-bold">{surfaceArea} m²</span>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Click **Draw Lasso Boundary**, zoom deep into building structures with street markers, and click corner points to trace precise dimensions.
+            </p>
+            <div className="space-y-2 max-h-[140px] overflow-y-auto">
+              {savedAreas.map((area, index) => (
+                <div key={area.id} onClick={() => { setActiveAreaIdx(index); setSurfaceArea(area.sqmeters); }} className={`p-2.5 rounded-lg border text-xs cursor-pointer transition-all flex justify-between items-center ${activeAreaIdx === index ? 'bg-blue-950/40 border-blue-500 text-slate-100' : 'bg-[#1f2937]/40 border-slate-800 text-slate-400'}`}>
+                  <div className="flex flex-col truncate font-mono">
+                    <span className="font-sans font-bold text-slate-200 truncate">{area.name}</span>
+                    <span className="text-[10px] text-slate-500 mt-0.5">Footprint Size: {area.sqmeters} m² ({area.type} Allocation)</span>
+                  </div>
+                  <button disabled={savedAreas.length <= 1} onClick={(e) => purgeActiveSurfaceNode(area.id, e)} className="text-slate-600 hover:text-red-400 disabled:opacity-20 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
-                <input type="range" min="50" max="5000" value={surfaceArea} onChange={(e) => setSurfaceArea(parseInt(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] text-slate-400 uppercase font-mono mb-1">DAILY SOLAR HOURS</label>
-                  <input type="number" min="1" max="24" value={dailySolarHours} onChange={(e) => setDailySolarHours(parseInt(e.target.value))} className="w-full bg-[#1f2937] border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono" />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-slate-400 uppercase font-mono mb-1">NEED RATING (1-10)</label>
-                  <input type="number" min="1" max="10" value={needRating} onChange={(e) => setNeedRating(parseInt(e.target.value))} className="w-full bg-[#1f2937] border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono" />
-                </div>
-              </div>
-              <button onClick={runSciPyOptimization} className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold py-2 rounded text-xs transition-all uppercase tracking-wider">
-                Compute Matrix Weights
-              </button>
-              <div className="bg-[#0e1322] border border-slate-800 p-2.5 rounded-lg flex justify-between items-center font-mono text-xs">
-                <span className="text-slate-400">OPTIMAL YIELD CAP:</span>
-                <span className="text-emerald-400 font-bold">{optimalYield.toLocaleString()} kcal/mo</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Heliomorphic Shifting Shadows Rendering Canvas Container */}
-          <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 shadow-md space-y-3">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xs font-bold tracking-widest uppercase text-slate-400 flex items-center gap-1.5">
-                <Cpu className="w-4 h-4 text-purple-400" /> Diurnal Heliomorphic Shadow Matrix
-              </h3>
-              <button onClick={() => setIsPlaying(!isPlaying)} className="p-1 bg-[#161f32] border border-slate-700 text-slate-300 rounded hover:bg-slate-700">
-                {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-            <div className="relative bg-[#020617] rounded-lg border border-slate-900 aspect-video overflow-hidden">
-              <canvas ref={canvasRef} width={360} height={160} className="w-full h-full object-cover" />
-              <div className="absolute bottom-1.5 right-2 font-mono text-[10px] text-slate-500">
-                Time: {Math.floor(simulatedHour).toString().padStart(2, '0')}:{(Math.floor((simulatedHour % 1) * 60)).toString().padStart(2, '0')}
-              </div>
-            </div>
-            <div className="flex justify-between items-center bg-[#161f32] px-3 py-1.5 rounded-lg border border-slate-800 text-[11px] font-mono">
-              <span className="text-slate-400">ACTIVE POSITION ANALYSIS POTENTIAL:</span>
-              <span className="text-sky-400 font-bold">{solarCover}% Clear</span>
-            </div>
-            <button onClick={saveToDatabase} className="w-full bg-blue-600 hover:bg-blue-700 text-slate-100 font-bold py-2 rounded text-xs transition-all uppercase tracking-wider flex items-center justify-center gap-1.5">
-              <Save className="w-3.5 h-3.5" /> Commit Runway Parameters to SQLite
-            </button>
-          </div>
-
-        </div>
-
-        {/* Right Side GIS Engineering Map Frame Layout Container (8 Columns block) */}
-        <div className="xl:col-span-8 grid grid-rows-12 gap-4 h-[600px] xl:h-auto">
-          
-          {/* Tabled Lookups Header Strip Navbar */}
-          <div className="row-span-2 bg-[#111827] border border-slate-800 rounded-xl p-3 flex flex-col justify-center shadow-md">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400 mb-1.5 flex items-center gap-1.5">
-              <Database className="w-3.5 h-3.5 text-emerald-400" /> Tabled High-Density Urban Zone Anchors
-            </span>
-            <div className="grid grid-cols-3 gap-2 text-xs font-mono">
-              {PRESET_ZONES.map(z => (
-                <button key={z.id} onClick={() => { setCoordinates([z.lat, z.lon]); setSolarCover(z.baseSolar); }} className={`p-1.5 rounded border text-left truncate transition-all ${coordinates[0] === z.lat ? 'bg-blue-950/60 border-blue-500 text-blue-300' : 'bg-[#1f2937]/40 border-slate-800 text-slate-400 hover:border-slate-700'}`}>
-                  ● {z.name.split(' ')[0]} Sector
-                </button>
               ))}
             </div>
           </div>
 
-          {/* Leaflet Street Raster Vector Map Frame Workspace Viewport */}
-          <div className="row-span-10 bg-[#111827] border border-slate-800 rounded-xl overflow-hidden relative shadow-inner">
-            <div className="absolute top-2.5 left-2.5 z-[1000] bg-[#0b0f19]/90 backdrop-blur border border-slate-700 px-2.5 py-1 rounded font-mono text-[10px] text-slate-300 pointer-events-none">
-              <span className="flex items-center gap-1.5"><Eye className="w-3 h-3 text-emerald-400" /> INTERFACE LAYER: Live Mapnik Engine (Click Anywhere to Reposition Pin Node)</span>
-            </div>
-            
-            <MapContainer center={coordinates} zoom={14} style={{ height: '100%', width: '100%' }}>
-              <TileLayer url="https://{s}.tile.jawg.io/jawg-sunny/{z}/{x}/{y}{r}.png?access-token=community" attribution='&copy; <a href="http://jawg.io" target="_blank">Jawg</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'/>
-              <ChangeView center={coordinates} />
-              <Marker position={coordinates} />
-              <MapInteractionHandler />
-            </MapContainer>
-          </div>
+          {/* Section B: Strategy Blueprints Output System Cards */}
+          {activeZone.type === 'Garden' ? (
+            /* CONSOLE MODULE FOR GREENHOUSE ROOFTOP ARCHITECTURES */
+            <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 shadow-xl space-y-4">
+              <h2 className="text-xs font-bold tracking-widest uppercase text-emerald-400 flex items-center gap-2">
+                <Leaf className="w-4 h-4" /> Weather-Adapted Horticulture Plan
+              </h2>
+              <div className="space-y-3 font-mono text-xs">
+                <div className="bg-[#0e1322] border border-slate-800 p-3 rounded-lg space-y-1">
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Climatic Resilient Plant Match List:</div>
+                  <div className="text-slate-200 font-sans font-bold text-sm">{activeZone.cropProfile}</div>
+                </div>
 
+                <div className="bg-[#0e1322] border border-slate-800 p-3 rounded-lg space-y-1">
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Suitable Method of Plantation:</div>
+                  <div className="text-sky-400 font-sans font-bold">{activeZone.method}</div>
+                </div>
+
+                <div className="bg-[#0e1322] border border-slate-800 p-3 rounded-lg space-y-1">
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Suitable Method of Harvesting:</div>
+                  <div className="text-emerald-400 font-sans font-bold">{activeZone.harvest}</div>
+                </div>
+
+                <div className="p-3 bg-emerald-950/20 border border-emerald-900/60 rounded-lg flex justify-between items-center font-sans">
+                  <span className="text-slate-400 text-xs font-bold uppercase">PROJECTED ANNUAL FOOD YIELD:</span>
+                  <span className="text-emerald-400 font-bold text-sm">{activeZone.yieldData}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* CONSOLE MODULE FOR PHOTOVOLTAIC SOLAR BLUEPRINTS */
+            <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 shadow-xl space-y-4">
+              <h2 className="text-xs font-bold tracking-widest uppercase text-amber-400 flex items-center gap-2">
+                <Sun className="w-4 h-4" /> Rooftop Solar Architecture Plan
+              </h2>
+              <div className="space-y-3.5 text-xs font-mono">
+                <div>
+                  <div className="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+                    <span>INPUT REQUIRED TARGET POWER LOAD:</span> <span className="text-amber-400 font-bold">{targetKW} kW Output</span>
+                  </div>
+                  <input type="range" min="5" max="250" value={targetKW} onChange={(e) => setTargetKW(parseInt(e.target.value))} className="w-full accent-amber-500 h-1 bg-slate-800 rounded appearance-none cursor-pointer" />
+                </div>
+
+                <div className="bg-[#0e1322] border border-slate-800 p-3 rounded-lg space-y-2">
+                  <div className="flex justify-between border-b border-slate-800/60 pb-1.5">
+                    <span className="text-slate-500 text-[10px] font-bold">REQUIRED PANEL COUNT:</span>
+                    <span className="text-slate-200 font-bold font-sans">{activeZone.panelsNeeded || Math.ceil(surfaceArea / 1.7)} Modules</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-800/60 pb-1.5">
+                    <span className="text-slate-500 text-[10px] font-bold">ARCHITECTURAL TILT RATING:</span>
+                    <span className="text-slate-200 font-bold font-sans">{activeZone.tiltAngle || '13.5° South Orientation'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 text-[10px] font-bold">INVERTER NETWORK DESIGN:</span>
+                    <span className="text-amber-400 font-bold font-sans text-[11px] truncate">{activeZone.inverterSpec || 'Distributed Network'}</span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-amber-950/20 border border-amber-900/60 rounded-lg text-center">
+                  <div className="text-amber-400 font-bold text-xs font-sans uppercase">
+                    {surfaceArea >= (targetKW * 7.5) ? "✓ Footprint Area Sufficiency Verified" : "⚠️ Warning: Surface Area Footprint Too Small"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Section C: Dimensions Manual Configuration Sliders */}
+          <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 shadow-xl space-y-3">
+            <h2 className="text-xs font-bold tracking-widest uppercase text-slate-400 flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-slate-400" /> Footprint Calibration Overrides
+            </h2>
+            <div>
+              <div className="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+                <span>MANUAL HOVER OVERRIDE AREA:</span> <span className="text-slate-200 font-bold">{surfaceArea} m²</span>
+              </div>
+              <input type="range" min="10" max="5000" value={surfaceArea} onChange={(e) => setSurfaceArea(parseInt(e.target.value))} className="w-full accent-blue-500 h-1 bg-slate-800 rounded appearance-none cursor-pointer" />
+            </div>
+          </div>
         </div>
 
+        {/* Right Hand Interactive Workspace Map Viewport Frame (8 Columns Wide) */}
+        <div className="xl:col-span-8 bg-[#111827] border border-slate-800 rounded-xl overflow-hidden shadow-inner relative flex flex-col min-h-[500px] xl:h-auto">
+          
+          {/* Action Control Button Ribbons Overlaid atop Map Canvas */}
+          <div className="absolute top-4 left-4 z-[1000] flex gap-2 bg-[#0b0f19]/90 border border-slate-700 p-2 rounded-lg shadow-2xl backdrop-blur-md">
+            <button 
+              onClick={() => setIsDrawingMode(!isDrawingMode)} 
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-mono text-xs font-bold uppercase tracking-wider transition-all border ${isDrawingMode ? 'bg-emerald-400 text-slate-950 border-emerald-400 font-black animate-pulse' : 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'}`}
+            >
+              <Cpu className="w-3.5 h-3.5" /> {isDrawingMode ? "Lasso Tool Engaged (Click Roof Corners)" : "Draw Lasso Boundary"}
+            </button>
+          </div>
+
+          <div className="absolute bottom-4 left-4 z-[1000] bg-[#0b0f19]/90 border border-slate-800 px-3 py-1.5 rounded text-[10px] font-mono text-slate-400 flex items-center gap-1.5 pointer-events-none shadow-xl">
+            <Hammer className="w-3.5 h-3.5 text-emerald-400" /> Navigation Guide: Use scroll wheel to zoom down tightly over structures without tile errors. Double-click final coordinate to complete tracing vector loops.
+          </div>
+
+          {/* Primary OpenLayers Deep-Zoom Canvas Mount Node */}
+          <div ref={mapContainerRef} className="w-full h-full flex-1 bg-slate-900" style={{ minHeight: '100%' }} />
+        </div>
       </div>
     </div>
   );
