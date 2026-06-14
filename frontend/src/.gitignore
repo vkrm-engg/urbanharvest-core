@@ -1,0 +1,12 @@
+# Front-end dependencies
+project5/frontend/node_modules/
+project5/frontend/dist/
+
+# Back-end environment & Database
+project5/backend/env/
+project5/backend/__pycache__/
+project5/backend/*.pyc
+*.db
+
+# OS files
+.DS_Store
