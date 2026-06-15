@@ -62,8 +62,6 @@ npm run dev
 ```
 The app will be available at `http://localhost:3000` (configured in `vite.config.js`).
 
-> If using the 3D Cesium view, set a valid free Cesium Ion access token in `CesiumEngine.jsx` (`CESIUM_ION_TOKEN`), or the globe will not render correctly.
-
 ### 2. Backend Setup
 ```bash
 cd backend
