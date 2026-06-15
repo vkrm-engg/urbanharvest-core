@@ -1,155 +1,178 @@
-# project name 
-URBANHARVEST-CORE
-## Description
-UrbanHarvest-Core is a multi-tier spatial intelligence engine that maps urban rooftops to optimize hybrid solar array and crop cultivation systems. By analyzing hyper-local groundwater levels and precipitation trends, the platform generates precise irrigation layouts while calculating net-positive offsets across the Electricity-to-CO₂ lifecycle matrix.
+# UrbanHarvest Core 🗺️🌱
 
-The platform combines predictive analytics, environmental monitoring, and renewable energy optimization to transform underutilized urban rooftops into sustainable food and energy production hubs.
+UrbanHarvest Core is a geospatial decision-support platform that helps urban property owners evaluate their roof or land area for **solar power generation**, **climate-resilient crop cultivation**, or a **hybrid co-located deployment**. Users trace their plot boundary on a live satellite map, choose a strategy, and receive a generated report combining live environmental data, energy yield estimates, and crop economics.
 
-## Key Features
+> ⚠️ **Hackathon MVP Notice**: This is a prototype built for a hackathon. Several modules (see *Known Limitations* below) use simplified models, placeholder formulas, or simulated data and are flagged accordingly. They represent the intended architecture for a production system, not finished production logic.
 
- Hybrid rooftop farming and solar optimization
- Groundwater and rainfall-based irrigation planning
- Solar panel spatial layout and yield forecasting
- Real-time environmental intelligence dashboards
- Energy generation and grid offset tracking
- Carbon emission reduction and sustainability metrics
+---
 
-## Project Architecture
+## 🚀 System Architecture
 
-### AI Engine (Python Predictive Microservice)
+The frontend operates as a single-page state machine within `Dashboard.jsx`, guiding the user through three views:
 
-The AI Engine performs advanced environmental and optimization analysis.
+```
+┌─────────────────────────┐
+│   1. LOGIN GATEWAY       │  Collects operator name + target address.
+│   (Dashboard.jsx)        │  Geocodes the address via OSM Nominatim
+└────────────┬─────────────┘  to get center coordinates for the map.
+             │
+             ▼
+┌─────────────────────────┐
+│   2. SPATIAL MAP VIEW    │  OpenLayers canvas with Google Satellite
+│   (Dashboard.jsx)        │  tiles. User traces a polygon over their
+└────────────┬─────────────┘  roof/land; area is computed via ol/sphere.
+             │
+             ▼
+┌─────────────────────────┐
+│   3. REPORT ANALYTICS    │  Sends coordinates, area, and chosen mode
+│   (LocationReport.jsx)   │  to the FastAPI backend for calculations.
+└────────────┬─────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│   FASTAPI BACKEND        │  Fetches live weather/rainfall data,
+│   (main.py)              │  computes solar sizing, grid offset, ROI,
+└─────────────────────────┘  and crop yield/profit estimates.
+```
 
-#### Data Models
+An optional **3D viewer** (`CesiumEngine.jsx`) provides a Cesium-based globe view with sun-position shadow simulation for the selected area.
 
-Analyze local rainfall (mm/year)
-Evaluate groundwater depth metrics
-Recommend crop suitability profiles
-Identify drought-resistant alternatives
+---
 
-#### Hybrid Optimizer
+## ✨ Core Features
 
-Compute optimal solar panel positioning
-Maximize solar energy generation
-Reduce crop heat stress through intelligent shading
- Balance agricultural and energy production
+- **Address Geocoding** — converts a human-readable address (e.g., "Chennai, Tamil Nadu, India") into coordinates via the free Nominatim API.
+- **Satellite Polygon Tracing** — draw a boundary directly on satellite imagery using `ol/interaction/Draw`; area is computed in m² via `ol/sphere/getArea`.
+- **Live Environmental Data** — fetches current temperature/humidity and historical annual rainfall + soil moisture (via Open-Meteo) for the selected coordinates.
+- **Three Strategy Modes**:
+  1. **Solar** — sizes a rooftop solar array, estimates daily/monthly/annual generation and savings (₹).
+  2. **Crops** — suggests a seasonal planting schedule with estimated yield and net profit based on area.
+  3. **Hybrid** — splits the area between solar and crops based on the household's energy demand.
+- **3D Shadow Simulation (optional)** — Cesium-powered globe with a time-of-day slider to visualize shadow patterns over the selected plot.
 
-#### Carbon Ledger Engine
+---
 
-Calculate electricity-to-carbon conversion metrics
-Track avoided CO₂ emissions
-Generate sustainability impact reports
-Maintain historical environmental performance records
+## 🛠️ Installation & Setup
 
-### Backend (Node.js API Layer)
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v18+ recommended)
+- [Python](https://www.python.org/) (3.10+ recommended)
 
-The backend exposes analytical insights through REST APIs.
+### 1. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
+The app will be available at `http://localhost:3000` (configured in `vite.config.js`).
 
-#### API Endpoints
+> If using the 3D Cesium view, set a valid free Cesium Ion access token in `CesiumEngine.jsx` (`CESIUM_ION_TOKEN`), or the globe will not render correctly.
 
-##### GET /api/v1/rooftop/:id/water-profile
+### 2. Backend Setup
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+The API will be available at `http://localhost:8000`.
 
-Returns:
+### 3. Production Build
+```bash
+cd frontend
+npm run build
+```
 
-Rainfall history
-Run-off capture estimates
-Groundwater safety thresholds
+---
 
-##### GET /api/v1/rooftop/:id/hybrid-yield
+## 📋 Step-by-Step Usage Guide
 
-Returns:
+1. **Sign In**: Enter an operator name, target address, and access key on the login screen, then click **Initialize Local Mapping Grid**. (See *Known Limitations* — this step is currently a UI gate, not a real authentication system.)
+2. **Locate Your Site**: The map centers on your address via geocoding.
+3. **Trace Your Plot**: Click **Trace Area Loop**, then click points around your roof or land boundary on the satellite view. Double-click the final point to close the loop.
+4. **Choose a Strategy**: A modal displays the traced area (m²) and lets you pick **Solar**, **Crops**, or **Hybrid**.
+5. **View Report**: The report screen shows live environmental data, solar sizing/savings (if applicable), and a crop planting/yield schedule (if applicable).
 
-Solar generation forecasts (kWh)
-Agricultural production forecasts (kg)
-Combined efficiency metrics
+---
 
-##### GET /api/v1/rooftop/:id/emissions
+## 📂 Project Structure
 
-Returns:
+```
+urbanharvest-core/
+├── ai_engine/
+│   └── viability_analyzer.py   # Structural viability heuristic (see Limitations)
+├── backend/
+│   ├── main.py                 # FastAPI app — location/report calculations
+│   ├── database.py             # SQLAlchemy models (Postgres, not yet wired into main.py)
+│   └── requirements.txt
+└── frontend/
+    ├── index.html
+    ├── package.json
+    ├── vite.config.js
+    ├── tailwind.config.js
+    ├── postcss.config.js
+    └── src/
+        ├── main.jsx
+        ├── index.css
+        ├── Dashboard.jsx        # Login, map, and state machine
+        ├── CesiumEngine.jsx      # Optional 3D globe + shadow simulation
+        └── pages/
+            └── LocationReport.jsx
+```
 
-Grid electricity displacement statistics
-Historical carbon offset records
-Carbon sequestration metrics
+---
 
+## 📦 Key Dependencies
 
-### Frontend (React Dashboard)
+**Frontend** (`frontend/package.json`):
+```json
+{
+  "dependencies": {
+    "cesium": "^1.142.0",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.344.0",
+    "ol": "^10.9.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-leaflet": "^4.2.1"
+  }
+}
+```
 
-The frontend provides an interactive visualization layer for monitoring rooftop performance.
+**Backend** (`backend/requirements.txt`):
+```
+fastapi
+uvicorn
+pydantic
+scipy
+numpy
+sqlalchemy
+requests
+```
 
-#### Water Dynamics Widget
+---
 
-Monthly rainfall visualization
-Groundwater depletion indicators
-Irrigation recommendations
+## 🌍 External APIs Used
 
-#### Co-Location Toggle
+- **OSM Nominatim** — address-to-coordinate geocoding (no API key required).
+- **Open-Meteo** — live weather, historical rainfall, and soil moisture data (no API key required).
+- **Google Satellite Tiles** — basemap imagery for the map view.
+- **Cesium Ion** (optional) — required only for the 3D globe view; needs a free access token.
 
-Interactive rooftop mapping
-Solar panel placement overlays
-Crop canopy visualization
-Hybrid system planning tools
+These are free/public endpoints with rate limits — for live demos, consider caching responses or having fallback data ready.
 
-#### Carbon & Grid Counter
+---
 
-Real-time energy generation tracking
-CO₂ emission reduction monitoring
-Sustainability impact dashboard
+## ⚠️ Known Limitations / Roadmap
 
+This project is an MVP. The following areas are simplified and intended as a foundation for future work:
 
+- **Viability analyzer (`ai_engine/viability_analyzer.py`)**: Currently generates a synthetic test image and computes a structural viability heuristic from it, rather than analyzing real satellite imagery of the user's traced plot. Planned: replace with computer-vision analysis of the actual satellite tile for the selected boundary.
+- **Authentication**: The login screen collects credentials but does not validate them against a backend — it is currently a UI flow gate. A `User` model exists in `database.py` but is not yet connected. Planned: real auth + session persistence.
+- **Database**: `database.py` defines `User` and `SavedPlot` models for Postgres but is not yet called from `main.py`. Planned: persist traced plots and reports per user.
+- **Solar & crop formulas**: Generation rates (4.6 units/kWp/day), panel area ratio (7.2 m²/kWp), electricity tariff (₹8.50/unit), and crop yield/profit figures are estimated constants for demo purposes, not site-specific engineering calculations. See `backend/main.py` for the exact formulas used.
 
-## Technology Stack
+---
 
-### Frontend
+## 📄 License
 
-React.js
-JavaScript
-CSS / Tailwind CSS
-
-### Backend
-
-Node.js
-Express.js
-REST APIs
-
-### AI & Analytics
-
-Python
-NumPy
-Pandas
-Scikit-Learn
-
-### Data Sources
-
-Weather APIs
-Rainfall datasets
-Groundwater monitoring data
-Solar irradiation datasets
-
-
-## Sustainability Impact
-
-UrbanHarvest-Core helps cities:
-
-Increase urban food production
-Reduce dependence on conventional power grids
-Improve rooftop utilization
-Lower carbon emissions
-Promote climate-resilient infrastructure
-
-
-## Future Enhancements
-
-Satellite imagery integration
-AI-powered crop disease prediction
-IoT sensor connectivity
-Automated irrigation control
-Smart city integration
-
-
-## Authors
-
-Hackathon Project Team
-
-## License
-
-MIT License
+Specify your license here (e.g., MIT).
