@@ -9,7 +9,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "cesium": "^1.142.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.344.0",
     "ol": "^10.9.0",
