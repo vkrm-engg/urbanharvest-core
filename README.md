@@ -12,30 +12,28 @@ The frontend operates as a single-page state machine within `Dashboard.jsx`, gui
 
 ```
 ┌─────────────────────────┐
-│   1. LOGIN GATEWAY       │  Collects operator name + target address.
-│   (Dashboard.jsx)        │  Geocodes the address via OSM Nominatim
-└────────────┬─────────────┘  to get center coordinates for the map.
+│   1. LOGIN GATEWAY      │  Collects operator name + target address.
+│   (Dashboard.jsx)       │  Geocodes the address via OSM Nominatim
+└────────────┬────────────┘  to get center coordinates for the map.
              │
              ▼
 ┌─────────────────────────┐
-│   2. SPATIAL MAP VIEW    │  OpenLayers canvas with Google Satellite
-│   (Dashboard.jsx)        │  tiles. User traces a polygon over their
-└────────────┬─────────────┘  roof/land; area is computed via ol/sphere.
+│   2. SPATIAL MAP VIEW   │  OpenLayers canvas with Google Satellite
+│   (Dashboard.jsx)       │  tiles. User traces a polygon over their
+└────────────┬────────────┘  roof/land; area is computed via ol/sphere.
              │
              ▼
 ┌─────────────────────────┐
-│   3. REPORT ANALYTICS    │  Sends coordinates, area, and chosen mode
-│   (LocationReport.jsx)   │  to the FastAPI backend for calculations.
-└────────────┬─────────────┘
+│   3. REPORT ANALYTICS   │  Sends coordinates, area, and chosen mode
+│   (LocationReport.jsx)  │  to the FastAPI backend for calculations.
+└────────────┬────────────┘
              │
              ▼
 ┌─────────────────────────┐
-│   FASTAPI BACKEND        │  Fetches live weather/rainfall data,
-│   (main.py)              │  computes solar sizing, grid offset, ROI,
+│   FASTAPI BACKEND       │  Fetches live weather/rainfall data,
+│   (main.py)             │  computes solar sizing, grid offset, ROI,
 └─────────────────────────┘  and crop yield/profit estimates.
 ```
-
-An optional **3D viewer** (`CesiumEngine.jsx`) provides a Cesium-based globe view with sun-position shadow simulation for the selected area.
 
 ---
 
@@ -48,8 +46,6 @@ An optional **3D viewer** (`CesiumEngine.jsx`) provides a Cesium-based globe vie
   1. **Solar** — sizes a rooftop solar array, estimates daily/monthly/annual generation and savings (₹).
   2. **Crops** — suggests a seasonal planting schedule with estimated yield and net profit based on area.
   3. **Hybrid** — splits the area between solar and crops based on the household's energy demand.
-- **3D Shadow Simulation (optional)** — Cesium-powered globe with a time-of-day slider to visualize shadow patterns over the selected plot.
-
 ---
 
 ## 🛠️ Installation & Setup
@@ -175,4 +171,4 @@ This project is an MVP. The following areas are simplified and intended as a fou
 
 ## 📄 License
 
-Specify your license here (e.g., MIT).
+This project is open-source software licensed under the **MIT License**. See the [LICENSE] file for the full text.
