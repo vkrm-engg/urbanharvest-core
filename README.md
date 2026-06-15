@@ -108,7 +108,6 @@ urbanharvest-core/
         ├── main.jsx
         ├── index.css
         ├── Dashboard.jsx        # Login, map, and state machine
-        ├── CesiumEngine.jsx      # Optional 3D globe + shadow simulation
         └── pages/
             └── LocationReport.jsx
 ```
@@ -121,7 +120,6 @@ urbanharvest-core/
 ```json
 {
   "dependencies": {
-    "cesium": "^1.142.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.344.0",
     "ol": "^10.9.0",
@@ -150,7 +148,6 @@ requests
 - **OSM Nominatim** — address-to-coordinate geocoding (no API key required).
 - **Open-Meteo** — live weather, historical rainfall, and soil moisture data (no API key required).
 - **Google Satellite Tiles** — basemap imagery for the map view.
-- **Cesium Ion** (optional) — required only for the 3D globe view; needs a free access token.
 
 These are free/public endpoints with rate limits — for live demos, consider caching responses or having fallback data ready.
 
