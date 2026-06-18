@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+scipy
+numpy
+sqlalchemy
+requests
+opencv-python-headless
+numpy
+requests

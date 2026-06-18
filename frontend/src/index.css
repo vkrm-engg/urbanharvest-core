@@ -1,0 +1,239 @@
+@import 'leaflet/dist/leaflet.css';
+@import 'ol/ol.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #02050d;
+    color: #f1f5f9;
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+  }
+}
+
+/* Custom Cyberpunk Font utilities */
+.font-tech {
+  font-family: 'Rajdhani', sans-serif;
+}
+
+.font-console {
+  font-family: 'Share Tech Mono', monospace;
+}
+
+/* Animations */
+@keyframes cyber-scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes laser-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+@keyframes hologram-glow {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(0, 240, 255, 0.4)); }
+  50% { filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.8)); }
+}
+
+.animate-scan {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-scan::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(to bottom, transparent, rgba(0, 240, 255, 0.6), transparent);
+  animation: cyber-scan 3s linear infinite;
+  pointer-events: none;
+}
+
+/* Glassmorphism / Liquid Glass Styles */
+.glass-panel {
+  background: rgba(10, 17, 34, 0.65);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+.liquid-glass {
+  background: linear-gradient(135deg, rgba(10, 20, 42, 0.7) 0%, rgba(5, 10, 25, 0.85) 100%);
+  backdrop-filter: blur(20px) saturate(200%);
+  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.6),
+    inset 0 0 16px rgba(0, 240, 255, 0.05);
+}
+
+/* Glowing Neon Borders */
+.neon-border-cyan {
+  border-color: rgba(0, 240, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.15), inset 0 0 10px rgba(0, 240, 255, 0.05);
+}
+
+.neon-border-green {
+  border-color: rgba(57, 255, 20, 0.3);
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.15), inset 0 0 10px rgba(57, 255, 20, 0.05);
+}
+
+.neon-border-magenta {
+  border-color: rgba(255, 0, 127, 0.3);
+  box-shadow: 0 0 10px rgba(255, 0, 127, 0.15), inset 0 0 10px rgba(255, 0, 127, 0.05);
+}
+
+.neon-border-gold {
+  border-color: rgba(255, 170, 0, 0.3);
+  box-shadow: 0 0 10px rgba(255, 170, 0, 0.15), inset 0 0 10px rgba(255, 170, 0, 0.05);
+}
+
+/* Text Glows */
+.text-glow-cyan {
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+}
+
+.text-glow-green {
+  text-shadow: 0 0 8px rgba(57, 255, 20, 0.6);
+}
+
+.text-glow-magenta {
+  text-shadow: 0 0 8px rgba(255, 0, 127, 0.6);
+}
+
+.text-glow-gold {
+  text-shadow: 0 0 8px rgba(255, 170, 0, 0.6);
+}
+
+/* Cyber Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #02050d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.3);
+  border-radius: 3px;
+  border: 1px solid rgba(0, 240, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.6);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+/* OpenLayers Style Hacks */
+.ol-zoom {
+  left: auto !important;
+  right: 1.5rem !important;
+  top: 1.5rem !important;
+}
+
+.ol-zoom button {
+  background: rgba(10, 17, 34, 0.8) !important;
+  color: #00f0ff !important;
+  border: 1px solid rgba(0, 240, 255, 0.3) !important;
+  border-radius: 4px !important;
+  font-family: 'Share Tech Mono', monospace !important;
+  cursor: pointer;
+}
+
+.ol-zoom button:hover {
+  background: rgba(0, 240, 255, 0.1) !important;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4) !important;
+}
+
+/* Cyberpunk scanline sweep keyframes */
+@keyframes scanline-sweep {
+  0% { transform: translateY(-100vh); }
+  100% { transform: translateY(100vh); }
+}
+
+.animate-scanline-sweep {
+  animation: scanline-sweep 12s linear infinite;
+}
+
+/* Glitch text effect styling */
+.glitch-wrapper {
+  position: relative;
+}
+.glitch {
+  position: relative;
+}
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+.glitch::before {
+  left: 2px;
+  text-shadow: -1.5px 0 #ff007f;
+  clip: rect(44px, 450px, 56px, 0);
+  animation: glitch-anim 6s infinite linear alternate-reverse;
+}
+.glitch::after {
+  left: -2px;
+  text-shadow: -1.5px 0 #00f0ff, 0 1.5px #ff007f;
+  clip: rect(85px, 450px, 140px, 0);
+  animation: glitch-anim-2 4s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+  0% { clip: rect(15px, 9999px, 66px, 0); }
+  12% { clip: rect(34px, 9999px, 55px, 0); }
+  24% { clip: rect(81px, 9999px, 120px, 0); }
+  36% { clip: rect(110px, 9999px, 130px, 0); }
+  48% { clip: rect(22px, 9999px, 80px, 0); }
+  60% { clip: rect(95px, 9999px, 115px, 0); }
+  72% { clip: rect(40px, 9999px, 75px, 0); }
+  84% { clip: rect(122px, 9999px, 145px, 0); }
+  96% { clip: rect(55px, 9999px, 92px, 0); }
+  100% { clip: rect(14px, 9999px, 60px, 0); }
+}
+@keyframes glitch-anim-2 {
+  0% { clip: rect(65px, 9999px, 110px, 0); }
+  15% { clip: rect(5px, 9999px, 40px, 0); }
+  30% { clip: rect(95px, 9999px, 140px, 0); }
+  45% { clip: rect(12px, 9999px, 85px, 0); }
+  60% { clip: rect(115px, 9999px, 135px, 0); }
+  75% { clip: rect(45px, 9999px, 70px, 0); }
+  90% { clip: rect(78px, 9999px, 105px, 0); }
+  100% { clip: rect(88px, 9999px, 120px, 0); }
+}
+
+/* Map radar pulse overlay animation */
+.radar-sweep {
+  border: 1.5px solid rgba(0, 240, 255, 0.45);
+  border-radius: 50%;
+  animation: radar-pulse 3s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.2), inset 0 0 15px rgba(0, 240, 255, 0.1);
+}
+@keyframes radar-pulse {
+  0% { transform: scale(0.1); opacity: 0.9; }
+  50% { opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* Blinking terminal indicators */
+.terminal-blink {
+  animation: terminal-blink-key 1.5s steps(2, start) infinite;
+}
+@keyframes terminal-blink-key {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
