@@ -1,10 +1,26 @@
+# UrbanHarvest Core API - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# --- Web Framework & Server ---
 fastapi
 uvicorn
 pydantic
+
+# --- Scientific / Numerical Computing (used by ai_engine.viability_analyzer) ---
 scipy
 numpy
+
+# --- Database ORM ---
 sqlalchemy
+
+# --- HTTP Client (used to call Open-Meteo weather API) ---
 requests
+
+# --- Computer Vision (headless build, no GUI deps - suitable for servers/containers) ---
 opencv-python-headless
+
+# NOTE: 'numpy' and 'requests' below are duplicate entries already listed above.
+# This does not break installation (pip will just resolve them once), but it's
+# redundant and can be safely removed for a cleaner dependency list.
 numpy
 requests
