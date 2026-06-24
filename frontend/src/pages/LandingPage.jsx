@@ -182,7 +182,7 @@ export default function LandingPage({ onLaunchEngine }) {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Enter street address or region..."
+                placeholder="Enter Local region..."
                 className="bg-transparent text-xs text-white placeholder-slate-600 outline-none w-full tracking-widest uppercase font-console"
               />
               {isSearching && <Loader2 className="w-4 h-4 text-cyan-400 animate-spin flex-shrink-0" />}
