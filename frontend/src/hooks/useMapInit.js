@@ -21,21 +21,22 @@ export function useMapInit(containerId, latitude, longitude, onAreaCalculated) {
     const latNum = parseFloat(latitude) || 13.0827;
     const lngNum = parseFloat(longitude) || 80.2707;
 
-    // 1. Base Satellite Imagery Layer
+    // 1. ESRI World Imagery — open, high-res satellite base layer
     const satelliteLayer = new TileLayer({
       source: new XYZ({
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        maxZoom: 19
+        maxZoom: 19,
+        attributions: 'Tiles © Esri'
       })
     });
 
-    // 2. Transparent Street/Label Overlay Layer (ESRI World Boundaries and Places)
+    // 2. CartoDB dark-matter labels-only overlay (transparent background, open source)
     const labelsLayer = new TileLayer({
       source: new XYZ({
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-        crossOrigin: 'anonymous'
+        url: 'https://a.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png',
+        attributions: '© CARTO'
       }),
-      opacity: 0.85
+      opacity: 0.9
     });
 
     vectorSourceRef.current = new VectorSource();
@@ -52,9 +53,9 @@ export function useMapInit(containerId, latitude, longitude, onAreaCalculated) {
       target: containerId,
       layers: [satelliteLayer, labelsLayer, vectorLayer],
       view: new View({
-        center: fromLonLat([lngNum, latNum]),
+        center: fromLonLat([0, 0]),
         zoom: 18,
-        maxZoom: 21
+        maxZoom: 19
       }),
       controls: []
     });
@@ -64,9 +65,20 @@ export function useMapInit(containerId, latitude, longitude, onAreaCalculated) {
     return () => {
       if (mapRef.current) {
         mapRef.current.setTarget(undefined);
+        mapRef.current = null;
       }
     };
-  }, [containerId, latitude, longitude]);
+  }, [containerId]);
+
+  // Center view on coordinate updates without recreating the map
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const latNum = parseFloat(latitude);
+    const lngNum = parseFloat(longitude);
+    if (!isNaN(latNum) && !isNaN(lngNum)) {
+      mapRef.current.getView().setCenter(fromLonLat([lngNum, latNum]));
+    }
+  }, [latitude, longitude]);
 
   const toggleLassoMode = (activate) => {
     if (!mapRef.current || !vectorSourceRef.current) return;

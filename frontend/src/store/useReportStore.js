@@ -10,6 +10,7 @@ export const useReportStore = create((set) => ({
   tracedArea: 1378,
   coordinates: { lat: 13.0827, lng: 80.2707 },
   selectedMode: 'hybrid',
+  monthlyConsumption: 650, // kWh per month
 
   // Actions to update state safely
   setPinCode: (pin) => set({ pinCode: pin }),
@@ -17,4 +18,5 @@ export const useReportStore = create((set) => ({
   setTracedArea: (area) => set({ tracedArea: area }),
   setCoordinates: (coords) => set({ coordinates: coords }),
   setSelectedMode: (mode) => set({ selectedMode: mode }),
+  setMonthlyConsumption: (kwh) => set({ monthlyConsumption: kwh }),
 }));

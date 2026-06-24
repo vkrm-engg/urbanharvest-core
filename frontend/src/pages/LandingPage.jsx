@@ -138,10 +138,9 @@ export default function LandingPage({ onLaunchEngine }) {
             UrbanHarvest Portal
           </span>
           
-          <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight leading-tight pt-2 font-tech glitch-wrapper">
-            ROOFTOP RESOURCE OPTIMIZATION<br />
-            <span className="glitch bg-gradient-to-r from-cyan-400 via-emerald-400 to-pink-500 bg-clip-text text-transparent text-glow-cyan" data-text="SATELLITE VIABILITY ANALYZER">
-              SATELLITE VIABILITY ANALYZER
+          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight pt-2 font-tech glitch-wrapper">
+            <span className="glitch bg-gradient-to-r from-cyan-400 via-emerald-400 to-pink-500 bg-clip-text text-transparent text-glow-cyan" data-text="ROOFTOP RESOURCE OPTIMISATION">
+              ROOFTOP RESOURCE OPTIMISATION
             </span>
           </h1>
           

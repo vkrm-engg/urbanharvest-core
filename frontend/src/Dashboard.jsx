@@ -8,18 +8,44 @@ export default function Dashboard() {
   const [unlockedZone, setUnlockedZone] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
 
-  const handleLaunchEngine = (locationData) => {
+  const handleLaunchEngine = async (locationData) => {
     try {
       const store = useReportStore.getState();
       store.setCoordinates({ lat: locationData.lat, lng: locationData.lon });
       store.setResolvedAddress(locationData.addressText);
-      const code = locationData.pinCode || '560001';
-      store.setPinCode(code);
-      setUnlockedZone(code);
+
+      // Use the PIN code if already provided (PIN tab or Nominatim returned it)
+      let code = locationData.pinCode;
+
+      if (code) {
+        // PIN already known — launch immediately
+        store.setPinCode(code);
+        setUnlockedZone(code);
+      } else {
+        // Optimistically open the map with a placeholder while we resolve the PIN
+        store.setPinCode('Resolving...');
+        setUnlockedZone('Resolving...');
+
+        // Reverse-geocode coordinates to find the actual postcode
+        try {
+          const revRes = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${locationData.lat}&lon=${locationData.lon}&addressdetails=1`,
+            { headers: { 'User-Agent': 'UrbanHarvestCore/1.0', 'Accept-Language': 'en' } }
+          );
+          const revData = await revRes.json();
+          const resolved = revData?.address?.postcode || 'N/A';
+          store.setPinCode(resolved);
+          setUnlockedZone(resolved);
+        } catch (_) {
+          store.setPinCode('N/A');
+          setUnlockedZone('N/A');
+        }
+      }
     } catch (err) {
       setErrorMessage("Critical state engine allocation fault.");
     }
   };
+
 
   const handleResetDashboard = () => {
     setUnlockedZone(null);

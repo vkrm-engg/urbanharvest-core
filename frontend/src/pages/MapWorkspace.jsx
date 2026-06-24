@@ -3,7 +3,7 @@ import { useMapInit } from '../hooks/useMapInit';
 import SolarProfileWizard from './SolarProfileWizard';
 import LocationReport from './LocationReport';
 import { useReportStore } from '../store/useReportStore';
-import { ArrowLeft, Layers, MousePointer, Info, Maximize, Activity, Sun, Sprout, Layers2, Save, History, Terminal } from 'lucide-react';
+import { ArrowLeft, Layers, MousePointer, Info, Maximize, Activity, Sun, Sprout, Layers2, Save, History, Terminal, Zap } from 'lucide-react';
 
 export default function MapWorkspace({ targetPin, onBack }) {
   const mapContainerId = 'telemetry-map-canvas';
@@ -12,7 +12,7 @@ export default function MapWorkspace({ targetPin, onBack }) {
   const [selectedSystem, setSelectedSystem] = useState(null);
   const [savedPlots, setSavedPlots] = useState([]);
   
-  const { coordinates, resolvedAddress, pinCode } = useReportStore();
+  const { coordinates, resolvedAddress, pinCode, monthlyConsumption, setMonthlyConsumption } = useReportStore();
   const safePinString = pinCode || targetPin || '';
 
   // Real-time terminal log stream state
@@ -121,6 +121,7 @@ export default function MapWorkspace({ targetPin, onBack }) {
     store.setSelectedMode(mode);
     store.setTracedArea(calculatedArea);
     store.setPinCode(safePinString);
+    store.setMonthlyConsumption(monthlyConsumption);
     setSelectedSystem(mode);
   };
 
@@ -209,6 +210,26 @@ export default function MapWorkspace({ targetPin, onBack }) {
                       </div>
                     </div>
 
+                    {/* Monthly Power Consumption Input */}
+                    <div className="bg-slate-950/70 border border-cyan-500/15 rounded-lg p-3.5 space-y-2">
+                      <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold flex items-center gap-1.5">
+                        <Zap className="w-3 h-3 text-amber-400" />
+                        Monthly Power Consumption
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="10000"
+                          value={monthlyConsumption}
+                          onChange={(e) => setMonthlyConsumption(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="flex-1 bg-slate-900/80 border border-cyan-500/30 focus:border-cyan-400 outline-none rounded-lg py-2 px-3 text-white font-bold text-xs tracking-widest transition-all focus:shadow-[0_0_10px_rgba(0,240,255,0.15)] font-console w-0"
+                        />
+                        <span className="text-[9px] text-amber-400 font-bold tracking-wider bg-amber-950/30 border border-amber-500/30 px-2 py-1.5 rounded shrink-0">KWH</span>
+                      </div>
+                      <p className="text-[8px] text-slate-600 uppercase tracking-wider">Enter your avg monthly electricity usage</p>
+                    </div>
+
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
@@ -265,20 +286,7 @@ export default function MapWorkspace({ targetPin, onBack }) {
       )}
 
       {/* OVERLAY WIZARDS - Keeps the map container mounted in the DOM layer beneath */}
-      {selectedSystem === 'solar' && (
-        <div className="absolute inset-0 z-30 bg-[#0A0E27]/90 backdrop-blur-md overflow-y-auto animate-fadeIn">
-          <SolarProfileWizard 
-            availableArea={calculatedArea} 
-            pinCode={safePinString} 
-            onBack={() => {
-              setSelectedSystem(null);
-              addLog(`NAVIGATION: RESTORED BOUNDARY CANVAS MATRIX VIEW.`);
-            }} 
-          />
-        </div>
-      )}
-
-      {['crops', 'hybrid'].includes(selectedSystem) && (
+      {['solar', 'crops', 'hybrid'].includes(selectedSystem) && (
         <div className="absolute inset-0 z-30 bg-[#02050d]/95 backdrop-blur-md overflow-y-auto animate-fadeIn">
           <LocationReport 
             onBack={() => {
