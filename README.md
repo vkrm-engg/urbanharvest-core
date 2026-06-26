@@ -2,7 +2,7 @@
 
 **UrbanHarvest** is an open-source geospatial sustainability planning application that lets urban developers, property owners, and environmental enthusiasts evaluate the viability of rooftop real estate for green energy (photovoltaics) and urban agriculture using computer vision and open mapping data.
 
-Built for the national-level hackathon **Unbound '26** under the theme of **Open Innovation**. This project relies entirely on open-source packages and open APIs — no paid or closed-source dependencies.
+This project relies entirely on open-source packages and open APIs — no paid or closed-source dependencies.
 
 ---
 
@@ -215,5 +215,3 @@ The UI uses a **cyberpunk dark aesthetic** with:
 - Scan-line and radial grid overlays
 
 ---
-
-*Built with ❤️ for Unbound '26 — Open Innovation track.*
